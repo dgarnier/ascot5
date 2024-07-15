@@ -509,6 +509,7 @@ int offload_and_simulate(
     }
 
     /* Code execution returns to host. */
+    MPI_Barrier(MPI_COMM_WORLD);
     print_out0(VERBOSE_NORMAL, mpi_rank, "gpu %lf s, host %lf s\n",
                mic_end-mic_start, host_end-host_start);
 
