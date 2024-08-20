@@ -1368,7 +1368,7 @@ class RunMixin(DistMixin):
                        cax=cax)
 
     @a5plt.openfigureifnoaxes(projection=None)
-    def plotwall_convergence(self, qnt, nmin=1000, nsample=10, axes=None):
+    def plotwall_convergence(self, qnt, nmin=1000, nsample=10, axes=None, flag=None):
         """Plot convergence of losses by subsampling the results.
 
         This function works by picking randomly a subset of
@@ -1380,7 +1380,7 @@ class RunMixin(DistMixin):
 
         Parameters
         ----------
-        qnt : {"lostpower", "peakload"}
+        qnt : {"lostpower", "peakload", "heatloaonflag", "averagedheatloaonflag}
             The name of the quantity for which the converge is plotted.
         nmin : int, optional
             Number of markers in the smallest sample.
@@ -1388,6 +1388,9 @@ class RunMixin(DistMixin):
             Number of samples.
         axes : :obj:`~matplotlib.axes.Axes`, optional
             The axes where figure is plotted or otherwise new figure is created.
+        flag : str, optional
+            Flag to be used when qnt="heatloaonflag" or qnt="averagedheatloaonflag",
+            identifying the element where the heat load will be calculated
         """
         self._require("_endstate")
         ids, weight, ekin = self.getstate("ids", "weight", "ekin", state="end")
@@ -1413,10 +1416,35 @@ class RunMixin(DistMixin):
                 _, area, loads, _, _ = self.getwall_loads(weights=True, p_ids=ids0[lost0])
                 val[i] = np.amax(loads/area) * wtotal / np.sum(weight[idx])
                 axes.set_ylabel(r'Peak load [W/m$^2$]')
+            elif qnt == 'heatloadonflag':
+                # find elements on the wall that correspond to our selected flag
+                wall = self.wall.read()
+                flagnumber = wall['flagIdList'][wall['flagIdStrings'].index(flag)]
+                ids_flag = np.where(wall['flag'] == flagnumber)[0]
+                ids0  = ids[idx]
+                lost0 = lost[idx]
+                ids_tiles, area, loads, _, _ = self.getwall_loads(weights=True, p_ids=ids0[lost0])
+                find = np.in1d(ids_tiles, ids_flag)
+                val[i] = np.sum(loads[find]/area[find]) * wtotal / np.sum(weight[idx])
+                axes.set_ylabel(r'Total heat load [W/m$^2$]')
+            elif qnt == 'averagedheatloadonflag':
+                # find elements on the wall that correspond to our selected flag
+                wall = self.wall.read()
+                flagnumber = wall['flagIdList'][wall['flagIdStrings'].index(flag)]
+                ids_flag = np.where(wall['flag'] == flagnumber)[0]
+                ids0  = ids[idx]
+                lost0 = lost[idx]
+                ids_tiles, area, loads, _, _ = self.getwall_loads(weights=True, p_ids=ids0[lost0])
+                find = np.in1d(ids_tiles, ids_flag)
+                val[i] = np.sum(loads[find])/np.sum(area[find]) * wtotal / np.sum(weight[idx])
+                axes.set_ylabel(r'Averaged heat load [W/m$^2$]')
+
 
         axes.set_xscale('log')
         axes.set_xlabel('Number of markers')
         axes.plot(nsubset, val)
+
+        return axes
 
     def plotwall_loadvsarea(self, axes=None):
         """Plot histogram showing area affected by at least a given load.
