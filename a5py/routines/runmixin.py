@@ -1438,6 +1438,9 @@ class RunMixin(DistMixin):
                 find = np.in1d(ids_tiles, ids_flag)
                 val[i] = np.sum(loads[find])/np.sum(area[find]) * wtotal / np.sum(weight[idx])
                 axes.set_ylabel(r'Averaged heat load [W/m$^2$]')
+            else:
+                print('Quantity not recognised. Please check the list. Will exit now.')
+                return
 
 
         axes.set_xscale('log')
