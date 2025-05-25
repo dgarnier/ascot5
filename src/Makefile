@@ -93,7 +93,7 @@ libascot.so: CFLAGS+=-fPIC -shared
 	CFLAGS+=-lm
 	ifdef CONDA_PREFIX
 		CLANG2PY_ARGS=-I$(CONDA_PREFIX)/include/ \
-		  -I$(CONDA_PREFIX)/x86_64-conda-linux-gnu/sysroot/usr/include/
+		  -isystem$(CONDA_PREFIX)/x86_64-conda-linux-gnu/sysroot/usr/include/
 	endif
 endif
 

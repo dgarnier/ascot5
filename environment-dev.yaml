@@ -37,14 +37,14 @@ dependencies:
   - sphinx-gallery
   - sphinx-design
   - sphinxcontrib-mermaid
-  - clang==15.*
-  - clang-tools==15.*
-  - libclang==15.*
-  - llvm-openmp==15.*
+  - clang==18.*
+  - clang-tools==18.*
+  - libclang==18.*
+  - llvm-openmp==18.*
   - libsanitizer
   - pylint
   - pip:
-    - clang==15.*
+    - clang==18.*
     - ctypeslib2
     - desc-opt
     - netCDF4	
