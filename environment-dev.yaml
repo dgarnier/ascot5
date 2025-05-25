@@ -45,6 +45,7 @@ dependencies:
   - pylint
   - pip:
     - clang==15.*
+    - libclang==15.*
     - ctypeslib2
     - desc-opt
     - netCDF4	
