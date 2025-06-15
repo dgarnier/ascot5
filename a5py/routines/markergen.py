@@ -279,3 +279,80 @@ class MarkerGenerator():
         dist._distribution = rhorpz / dist.phasespacevolume().units
 
         return dist
+
+    def dipole5d(self, rho, prob, r_edges, phi_edges, z_edges, mom1_edges,
+                mom2_edges, peak_psi_contour_r, peak_psi_contour_z, mask_tol=0.1):
+        """Maps a 1D dipole profile to a normalized 5D dist.
+
+        The resulting probability density has only spatial variance.
+
+        Parameters
+        ----------
+        rho : array_like, (nrho,)
+            The radial rho grid where the profile is given.
+        prob : array_like, (nrho,)
+            Distribution value at the grid centers.
+        r_edges : array_like
+            R abscissa edges for the output distribution.
+        phi_edges : array_like
+            Phi abscissa edges for the output distribution.
+        z_edges : array_like
+            Z abscissa edges for the output distribution.
+        mom1_edges : array_like
+            Either ppar or ekin abscissa edges for the output distribution.
+        mom2_edges : array_like
+            Either pperp or pitch abscissa edges for the output distribution.
+        peak_psi_contour_r : array_like, optional
+            r-coordinates of the desired region for marker generation.
+        peak_psi_contour_z : array_like, optional
+            z-coordinates of the desired region for marker generation.
+        mask_tol : float
+            Distance tolerance (in meters) when matching grid points to the contour points.
+
+        Returns
+        -------
+        markerdist : :class:`Dist`
+            Normalized 5D distribution from which markers can be sampled.
+        """
+        d = np.zeros((r_edges.size-1, phi_edges.size-1, z_edges.size-1,
+                    mom1_edges.size-1, mom2_edges.size-1))
+        if mom1_edges.units == mom2_edges.units:
+            dist = DistData(d, r=r_edges, phi=phi_edges, z=z_edges,
+                            ppar=mom1_edges, pperp=mom2_edges)
+        else:
+            dist = DistData(d, r=r_edges, phi=phi_edges, z=z_edges,
+                            ekin=mom1_edges, pitch=mom2_edges)
+
+        # Ensure contour coordinates have matching units
+        peak_psi_contour_r = unyt.unyt_array(peak_psi_contour_r, r_edges.units)
+        peak_psi_contour_z = unyt.unyt_array(peak_psi_contour_z, z_edges.units)
+
+        # Evaluate rho on the grid
+        rhorpz = self._ascot.input_eval(
+            dist.abscissa("r"), dist.abscissa("phi"),
+            dist.abscissa("z"), 0*unyt.s, "rho", grid=True)[:,:,:,0]
+
+        # Interpolate to get distribution values
+        # rhorpz = np.interp(rhorpz, rho, prob, left=0.0, right=0.0)
+
+        # Mask grid points that are close to (r,z) contour points
+        R, P, Z = np.meshgrid(dist.abscissa("r"), dist.abscissa("phi"),
+                            dist.abscissa("z"), indexing="ij")
+        R_flat = R[:,0,:].reshape(-1)
+        Z_flat = Z[:,0,:].reshape(-1)
+        mask = np.zeros_like(R_flat, dtype=bool).to_ndarray()
+        for pr, pz in zip(peak_psi_contour_r, peak_psi_contour_z):
+            distances = np.sqrt((R_flat - pr)**2 + (Z_flat - pz)**2).to('m')
+            dist_vals = distances.value
+            condition = dist_vals < mask_tol
+            mask = np.logical_or(mask, condition)
+
+        mask = mask.reshape(R.shape[0], 1, R.shape[2])  # reshape to (r,1,z)
+        rhorpz *= mask
+
+        # Normalize and tile into 5D distribution
+        rhorpz /= np.sum(rhorpz)
+        rhorpz = np.tile(rhorpz.T, (mom2_edges.size-1, mom1_edges.size-1,1,1,1)).T
+        dist._distribution = rhorpz / dist.phasespacevolume().units
+
+        return dist
